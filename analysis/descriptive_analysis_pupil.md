@@ -1,20 +1,21 @@
----
-title: "name_hider_experiment_pilot1"
-author: "Robbert van der Mijn"
-date: "03/03/2022"
-output: github_document
-editor_options: 
-  chunk_output_type: console
----
+name\_hider\_experiment\_pilot1
+================
+Robbert van der Mijn
+03/03/2022
 
 # Description dataset
 
 Load pre-processed data:
 
-```{r}
+``` r
 library(data.table)
 library(ggplot2); theme_set(theme_classic())
 library(lme4)
+```
+
+    ## Loading required package: Matrix
+
+``` r
 load("20220309165755_36pps_cit_bch_dec21_targetBL.rdata")
 dat <- dat[subject_nr != 18]
 dat$T1 <- relevel(dat$T1, "no_target")
@@ -23,9 +24,10 @@ dat <- dat[trial > 0]
 
 # Mean pupil sizes
 
-Quick check of mean trace for each participant (available at request). One pp had irregular pupil pattern do to calibration trouble.
+Quick check of mean trace for each participant (available at request).
+One pp had irregular pupil pattern do to calibration trouble.
 
-```{r}
+``` r
 # dat_sum <- dat[, .(pupil = mean(pupil, na.rm = T), se = sd(pupil, na.rm = T)/sqrt(.N)), by = .(time_T1, T1, subject_nr)]
 # ggplot(dat_sum, aes(x = time_T1, y = pupil, color = T1)) +
 #   geom_line() +
@@ -34,7 +36,7 @@ Quick check of mean trace for each participant (available at request). One pp ha
 
 Separate traces for lie and truth participants
 
-```{r}
+``` r
 dat_gsum <- dat[, .(pupil = mean(pupil, na.rm = T), se = sd(pupil, na.rm = T)/sqrt(.N)), by = .(time_T1, T1, lie)]
 ggplot(dat_gsum[time_T1 %between% c(-100, 1200)], aes(x = time_T1, y = pupil, color = T1)) +
   geom_line()  +
@@ -45,11 +47,14 @@ ggplot(dat_gsum[time_T1 %between% c(-100, 1200)], aes(x = time_T1, y = pupil, co
   labs(x = "Time since T1 presentation (s)", y = "Pupil size")
 ```
 
+![](descriptive_analysis_pupil_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+
 ## LMER
 
-linear mixed effects regression model on each time point. Use no_target as reference group. Plot coefficients: 
+linear mixed effects regression model on each time point. Use no\_target
+as reference group. Plot coefficients:
 
-```{r}
+``` r
 coeffs <- NULL
 for(t in seq(-200, 1200, by = 20)){
   m0 <- lmer(data = dat[time_T1 == t & lie == "lie"], pupil ~ T1 + (1|subject_nr))
@@ -63,22 +68,23 @@ ggplot(coeffs[T1 != "(Intercept)"], aes(x = time_T1, y = Estimate, color = T1)) 
   geom_ribbon(aes(ymin = Estimate - se, ymax = Estimate + se, fill = T1), alpha = .2, color = NA)
 ```
 
-Deviation from 0 means a difference from no_target group.
+![](descriptive_analysis_pupil_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+Deviation from 0 means a difference from no\_target group.
 
 # Logistic regression
 
-To predict T1 condition based on pupil size, we fit logistic model in which pupil size at each data point are used as predictor values. 
+To predict T1 condition based on pupil size, we fit logistic model in
+which pupil size at each data point are used as predictor values.
 
-$$
-odds \sim pupil_{t0} * \beta_0 + pupil_{t20} * \beta_1 + pupil_{t40} * \beta_1 + pupil_{t...} * \beta_1 + ... +\epsilon
-$$
+*o**d**d**s* ∼ *p**u**p**i**l*<sub>*t*0</sub> \* *β*<sub>0</sub> + *p**u**p**i**l*<sub>*t*20</sub> \* *β*<sub>1</sub> + *p**u**p**i**l*<sub>*t*40</sub> \* *β*<sub>1</sub> + *p**u**p**i**l*<sub>*t*...</sub> \* *β*<sub>1</sub> + ... + *ϵ*
 Odd are transformed into probabilities using:
 
 $$
-p = \frac{1}{1 + e^{-odds}} 
+p = \\frac{1}{1 + e^{-odds}} 
 $$
 
-```{r}
+``` r
 # Create dummy variables for each condition
 dat[, no_target := ifelse(T1 == "no_target", 1, 0)]
 dat[, control := ifelse(T1 == "control", 1, 0)]
@@ -94,9 +100,11 @@ subset <- dat_wide[T1 %in% c("target_secret", "no_target")]
 m0a <- glmer(data = subset, as.formula(formula), family = "binomial")
 ```
 
+    ## boundary (singular) fit: see ?isSingular
+
 We use the model to made predictions for each trial
 
-```{r}
+``` r
 library(forcats)
 predictions <- cbind(subset[, 1:5], prediction = predict(m0a, subset, type = "response"))
 predictions[, choice := round(prediction)]
@@ -109,4 +117,10 @@ plotdat <- predictions[, .N, by = .(subject_nr, type)]
 plotdat[, .(N = mean(N)), by = type]
 ```
 
-So on average we predict about 27 trials correct, 17 incorrect and 5 inconclusive
+    ##         type         N
+    ## 1:   correct 26.944444
+    ## 2:      <NA>  4.533333
+    ## 3: incorrect 17.277778
+
+So on average we predict about 27 trials correct, 17 incorrect and 5
+inconclusive
