@@ -3,6 +3,7 @@ title: "name_hider_experiment_pilot1"
 author: "Robbert van der Mijn"
 date: "03/03/2022"
 output: 
+  github_document
   html_document: 
     highlight: kate
     theme: spacelab
